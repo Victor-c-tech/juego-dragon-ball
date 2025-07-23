@@ -1,218 +1,193 @@
-/* --- Estilos Globales y Fondo --- */
-body {
-    margin: 0;
-    font-family: 'Bangers', cursive;
-    color: #fff;
-    background: radial-gradient(circle, #ffd700, #ffeb3b, #00c6ff, #0072ff);
-    background-size: 400% 400%;
-    animation: aura-animation 15s ease infinite;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-height: 100vh;
-    padding: 15px;
-    box-sizing: border-box;
-    position: relative;
-    overflow: hidden;
-}
+document.addEventListener('DOMContentLoaded', () => {
+    // --- ELEMENTOS DEL DOM ---
+    const startScreen = document.getElementById('start-screen');
+    const startGameButton = document.getElementById('start-game-button');
+    const gameContainer = document.getElementById('game-container');
+    
+    const gameBoard = document.getElementById('game-board');
+    const timerElement = document.getElementById('timer');
+    const levelDisplay = document.getElementById('level-display');
+    const modal = document.getElementById('final-modal');
+    const modalTitle = document.getElementById('modal-title');
+    const finalImage = document.getElementById('final-image');
+    const nextLevelButton = document.getElementById('next-level-button');
+    const restartButton = document.getElementById('restart-button');
 
-@keyframes aura-animation {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
-}
+    // --- CONFIGURACIÓN DE NIVELES ---
+    const levelsConfig = [
+        { level: 1, pairs: 8, time: 60, grid: 'grid-4x4' },
+        { level: 2, pairs: 10, time: 70, grid: 'grid-5x4' },
+        { level: 3, pairs: 12, time: 80, grid: 'grid-6x4' },
+        { level: 4, pairs: 15, time: 90, grid: 'grid-6x5' }
+    ];
 
-/* --- CLASE UTILITARIA --- */
-.hidden {
-    display: none !important;
-}
+    // --- IMÁGENES (Asegúrate de tener 15 imágenes de personajes en la carpeta img) ---
+    const allImageSources = [
+        { name: 'goku', img: 'img/1.gif' }, { name: 'vegeta', img: 'img/2.webp' },
+        { name: 'gohan', img: 'img/3.webp' }, { name: 'trunks', img: 'img/4.jpg' },
+        { name: 'piccolo', img: 'img/5.jpg' }, { name: 'frieza', img: 'img/6.jpg' },
+        { name: 'cell', img: 'img/7.jpg' }, { name: 'buu', img: 'img/8.jpg' },
+        { name: 'broly', img: 'img/9.jpg' }, { name: 'ginyu', img: 'img/10.jpg' },
+        { name: 'beerus', img: 'img/11.jpg' }, { name: 'whis', img: 'img/12.jpg' },
+        { name: 'jiren', img: 'img/13.jpg' }, { name: 'zamasu', img: 'img/14.jpg' },
+        { name: 'gogeta', img: 'img/15.jpg' }
+    ];
 
-/* --- PANTALLA DE INICIO --- */
-#start-screen {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-}
+    // --- ESTADO DEL JUEGO ---
+    let currentLevelIndex = 0;
+    let firstCard, secondCard;
+    let lockBoard = false;
+    let matchedPairs = 0;
+    let timerInterval;
 
-.start-title {
-    font-size: 5rem;
-    text-shadow: 6px 6px 10px rgba(0,0,0,0.7);
-    margin-bottom: 20px;
-}
+    // --- LÓGICA DEL JUEGO ---
 
-#start-game-button {
-    font-family: 'Bangers', cursive;
-    font-size: 2.5rem;
-    padding: 15px 40px;
-    border: none;
-    border-radius: 15px;
-    background-color: #ffc107;
-    color: #a54a00;
-    cursor: pointer;
-    transition: transform 0.2s, box-shadow 0.2s;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.4);
-}
-#start-game-button:hover {
-    transform: scale(1.05);
-    box-shadow: 0 8px 20px rgba(0,0,0,0.5);
-}
+    function shuffle(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
+    }
 
-/* --- CONTENEDOR DEL JUEGO --- */
-#game-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    width: 100%;
-    height: 100%;
-}
+    function createBoard() {
+        const config = levelsConfig[currentLevelIndex];
+        gameBoard.innerHTML = '';
+        gameBoard.className = 'game-board ' + config.grid;
 
-/* --- Estilos para el Logo --- */
-.logo-container {
-    position: absolute;
-    top: 15px;
-    left: 15px;
-    width: 90px;
-    z-index: 1100;
-}
-.logo-container img { width: 100%; filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.5)); }
+        const levelImages = allImageSources.slice(0, config.pairs);
+        const cardsArray = shuffle([...levelImages, ...levelImages]);
 
-/* --- Encabezado y Estadísticas --- */
-.game-header { text-align: center; margin-bottom: 15px; z-index: 10; }
+        cardsArray.forEach(cardData => {
+            const cardContainer = document.createElement('div');
+            cardContainer.classList.add('card-container');
+            const card = document.createElement('div');
+            card.classList.add('card');
+            card.dataset.name = cardData.name;
+            card.innerHTML = `
+                <div class="card-face card-front"><img src="${cardData.img}" alt="${cardData.name}"></div>
+                <div class="card-face card-back"><img src="img/back.png" alt="Reverso"></div>
+            `;
+            cardContainer.appendChild(card);
+            gameBoard.appendChild(cardContainer);
+            card.addEventListener('click', flipCard);
+        });
+    }
 
-.stats-container {
-    display: flex;
-    gap: 20px;
-    justify-content: center;
-    align-items: center;
-    margin-top: 10px;
-    font-size: 1.8rem;
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-}
+    function flipCard() {
+        if (lockBoard || this === firstCard || this.classList.contains('flipped')) return;
+        this.classList.add('flipped');
+        if (!firstCard) {
+            firstCard = this;
+            return;
+        }
+        secondCard = this;
+        lockBoard = true;
+        checkForMatch();
+    }
 
-#level-display, #timer {
-    padding: 5px 15px;
-    background-color: rgba(0,0,0,0.4);
-    border-radius: 10px;
-    border: 2px solid #ffc107;
-}
+    function checkForMatch() {
+        const isMatch = firstCard.dataset.name === secondCard.dataset.name;
+        isMatch ? disableCards() : unflipCards();
+    }
 
-/* --- Tablero y Nuevos Tamaños de Grid --- */
-.game-board {
-    display: grid;
-    gap: 12px;
-    perspective: 1200px;
-    z-index: 10;
-    transition: all 0.5s ease;
-    /* CORRECCIÓN CLAVE: Asegura que el tablero ocupe el ancho disponible */
-    width: 100%; 
-}
+    function disableCards() {
+        firstCard.removeEventListener('click', flipCard);
+        secondCard.removeEventListener('click', flipCard);
+        matchedPairs++;
+        resetTurn();
+        if (matchedPairs === levelsConfig[currentLevelIndex].pairs) {
+            endGame('win');
+        }
+    }
 
-/* Tamaños de tablero mejorados */
-.grid-4x4 { grid-template-columns: repeat(4, 1fr); max-width: 500px; }
-.grid-5x4 { grid-template-columns: repeat(5, 1fr); max-width: 620px; }
-.grid-6x4 { grid-template-columns: repeat(6, 1fr); max-width: 740px; }
-.grid-6x5 { grid-template-columns: repeat(6, 1fr); max-width: 740px; }
+    function unflipCards() {
+        setTimeout(() => {
+            firstCard.classList.remove('flipped');
+            secondCard.classList.remove('flipped');
+            resetTurn();
+        }, 1200);
+    }
 
+    function resetTurn() {
+        [firstCard, secondCard, lockBoard] = [null, null, false];
+    }
 
-.card-container {
-    background: rgba(255,255,255,0.1);
-    border-radius: 12px;
-    padding: 5px;
-    box-shadow: 0 4px 15px rgba(0,198,255,0.3);
-    backdrop-filter: blur(4px);
-    border: 1px solid rgba(255,255,255,0.2);
-}
+    function startTimer() {
+        const config = levelsConfig[currentLevelIndex];
+        let timeLeft = config.time;
+        timerElement.textContent = `Tiempo: ${timeLeft}`;
+        clearInterval(timerInterval);
+        timerInterval = setInterval(() => {
+            timeLeft--;
+            timerElement.textContent = `Tiempo: ${timeLeft}`;
+            if (timeLeft <= 0) {
+                endGame('lose');
+            }
+        }, 1000);
+    }
 
-/* --- Estilo de las Cartas --- */
-.card {
-    width: 100%;
-    aspect-ratio: 1 / 1;
-    position: relative;
-    transform-style: preserve-3d;
-    transition: transform 0.6s;
-    cursor: pointer;
-}
-.card.flipped { transform: rotateY(180deg); }
+    function endGame(result) {
+        clearInterval(timerInterval);
+        gameBoard.style.pointerEvents = 'none';
+        setTimeout(() => {
+            if (result === 'win') {
+                if (currentLevelIndex < levelsConfig.length - 1) {
+                    showModal('level-win');
+                } else {
+                    showModal('game-win');
+                }
+            } else {
+                showModal('lose');
+            }
+        }, 800);
+    }
 
-.card-face {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    backface-visibility: hidden;
-    border-radius: 8px;
-    overflow: hidden;
-}
-.card-face img { width: 100%; height: 100%; object-fit: cover; }
-.card-face.card-front { transform: rotateY(180deg); }
+    function showModal(type) {
+        restartButton.style.display = 'none';
+        nextLevelButton.style.display = 'none';
+        if (type === 'level-win') {
+            modalTitle.textContent = `¡Nivel ${levelsConfig[currentLevelIndex].level} Superado!`;
+            finalImage.src = 'img/ganaste.gif';
+            nextLevelButton.style.display = 'block';
+        } else if (type === 'game-win') {
+            modalTitle.textContent = '¡HAS COMPLETADO EL JUEGO!';
+            finalImage.src = 'img/juego-completado.gif';
+            restartButton.style.display = 'block';
+        } else {
+            modalTitle.textContent = '¡SE ACABÓ EL TIEMPO!';
+            finalImage.src = 'img/perdiste.gif';
+            restartButton.style.display = 'block';
+        }
+        modal.style.display = 'flex';
+    }
 
-/* --- Modal Final --- */
-.modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0,0,0,0.85);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    z-index: 2000;
-    animation: fadeIn 0.5s ease;
-}
+    function startLevel() {
+        modal.style.display = 'none';
+        gameBoard.style.pointerEvents = 'auto';
+        matchedPairs = 0;
+        resetTurn();
+        const config = levelsConfig[currentLevelIndex];
+        levelDisplay.textContent = `Nivel: ${config.level}`;
+        createBoard();
+        startTimer(); // El tiempo ahora empieza con cada nivel
+    }
 
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    // --- EVENTOS DE BOTONES ---
+    nextLevelButton.addEventListener('click', () => {
+        currentLevelIndex++;
+        startLevel();
+    });
 
-.modal-content {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 15px;
-    text-align: center;
-}
+    restartButton.addEventListener('click', () => {
+        currentLevelIndex = 0;
+        startLevel();
+    });
 
-#modal-title {
-    font-size: 3rem;
-    color: #ffc107;
-    margin: 0;
-    text-shadow: 3px 3px 6px rgba(0,0,0,0.8);
-}
-
-#final-image {
-    max-width: 80vw;
-    max-height: 50vh;
-    border-radius: 15px;
-    border: 4px solid #ffc107;
-    background-color: #000;
-}
-
-#next-level-button, #restart-button {
-    font-family: 'Bangers', cursive;
-    font-size: 1.5rem;
-    padding: 10px 25px;
-    border: none;
-    border-radius: 10px;
-    cursor: pointer;
-    transition: transform 0.2s, background-color 0.2s;
-}
-
-#next-level-button { background-color: #4CAF50; color: white; }
-#restart-button { background-color: #ffc107; color: #a54a00; }
-#next-level-button:hover, #restart-button:hover { transform: scale(1.05); }
-
-/* --- Diseño Responsivo --- */
-@media (max-width: 780px) {
-    .grid-6x4, .grid-6x5 { max-width: 100%; }
-}
-@media (max-width: 640px) {
-    .grid-5x4 { max-width: 100%; }
-}
-@media (max-width: 600px) {
-    .start-title { font-size: 3rem; }
-    #start-game-button { font-size: 1.8rem; }
-    .stats-container { font-size: 1.5rem; }
-    .game-board { gap: 8px; }
-    .grid-4x4 { max-width: 100%; }
-}
+    // --- INICIO DEL JUEGO (NUEVO MÉTODO) ---
+    startGameButton.addEventListener('click', () => {
+        startScreen.classList.add('hidden');
+        gameContainer.classList.remove('hidden');
+        startLevel();
+    });
+});
