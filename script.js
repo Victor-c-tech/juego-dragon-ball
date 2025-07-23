@@ -1,174 +1,218 @@
-document.addEventListener('DOMContentLoaded', () => {
-    // --- Definición de Componentes y Estado del Juego ---
-    const gameBoard = document.getElementById('game-board');
-    const timerElement = document.getElementById('timer');
-    const modal = document.getElementById('final-modal');
-    const finalImage = document.getElementById('final-image');
-    const restartButton = document.getElementById('restart-button');
+/* --- Estilos Globales y Fondo --- */
+body {
+    margin: 0;
+    font-family: 'Bangers', cursive;
+    color: #fff;
+    background: radial-gradient(circle, #ffd700, #ffeb3b, #00c6ff, #0072ff);
+    background-size: 400% 400%;
+    animation: aura-animation 15s ease infinite;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 15px;
+    box-sizing: border-box;
+    position: relative;
+    overflow: hidden;
+}
 
-    const imageSources = [
-        { name: 'goku', img: 'img/1.gif' },
-        { name: 'vegeta', img: 'img/2.webp' },
-        { name: 'gohan', img: 'img/3.webp' },
-        { name: 'trunks', img: 'img/4.jpg' },
-        { name: 'piccolo', img: 'img/5.jpg' },
-        { name: 'frieza', img: 'img/6.jpg' },
-        { name: 'cell', img: 'img/7.jpg' },
-        { name: 'buu', img: 'img/8.jpg' },
-    ];
+@keyframes aura-animation {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
 
-    let cardsArray = [];
-    let firstCard, secondCard;
-    let lockBoard = false;
-    let matchedPairs = 0;
-    let timerInterval;
-    const totalTime = 60;
-    let timeLeft = totalTime;
+/* --- CLASE UTILITARIA --- */
+.hidden {
+    display: none !important;
+}
 
-    // --- Lógica del Juego ---
+/* --- PANTALLA DE INICIO --- */
+#start-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
 
-    // Baraja las cartas usando el algoritmo Fisher-Yates
-    function shuffle(array) {
-        for (let i = array.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [array[i], array[j]] = [array[j], array[i]];
-        }
-    }
+.start-title {
+    font-size: 5rem;
+    text-shadow: 6px 6px 10px rgba(0,0,0,0.7);
+    margin-bottom: 20px;
+}
 
-    // Crea y renderiza las cartas en el tablero
-    function createBoard() {
-        cardsArray = [...imageSources, ...imageSources]; // Duplicar para tener parejas
-        shuffle(cardsArray);
-        gameBoard.innerHTML = ''; // Limpiar el tablero
-        
-        cardsArray.forEach(cardData => {
-            const cardContainer = document.createElement('div');
-            cardContainer.classList.add('card-container');
-            
-            const card = document.createElement('div');
-            card.classList.add('card');
-            card.dataset.name = cardData.name;
+#start-game-button {
+    font-family: 'Bangers', cursive;
+    font-size: 2.5rem;
+    padding: 15px 40px;
+    border: none;
+    border-radius: 15px;
+    background-color: #ffc107;
+    color: #a54a00;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.4);
+}
+#start-game-button:hover {
+    transform: scale(1.05);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+}
 
-            const frontFace = document.createElement('div');
-            frontFace.classList.add('card-face', 'card-front');
-            const frontImage = document.createElement('img');
-            frontImage.src = cardData.img;
-            frontFace.appendChild(frontImage);
-            
-            const backFace = document.createElement('div');
-            backFace.classList.add('card-face', 'card-back');
-            const backImage = document.createElement('img');
-            backImage.src = 'img/back.png';
-            backFace.appendChild(backImage);
-            
-            card.appendChild(frontFace);
-            card.appendChild(backFace);
-            cardContainer.appendChild(card);
-            
-            gameBoard.appendChild(cardContainer);
+/* --- CONTENEDOR DEL JUEGO --- */
+#game-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+}
 
-            card.addEventListener('click', flipCard);
-        });
-    }
+/* --- Estilos para el Logo --- */
+.logo-container {
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    width: 90px;
+    z-index: 1100;
+}
+.logo-container img { width: 100%; filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.5)); }
 
-    // Maneja el evento de voltear una carta
-    function flipCard() {
-        if (lockBoard) return;
-        if (this === firstCard) return; // Evita doble clic en la misma carta
+/* --- Encabezado y Estadísticas --- */
+.game-header { text-align: center; margin-bottom: 15px; z-index: 10; }
 
-        this.classList.add('flipped');
+.stats-container {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    align-items: center;
+    margin-top: 10px;
+    font-size: 1.8rem;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+}
 
-        if (!firstCard) {
-            firstCard = this;
-            return;
-        }
+#level-display, #timer {
+    padding: 5px 15px;
+    background-color: rgba(0,0,0,0.4);
+    border-radius: 10px;
+    border: 2px solid #ffc107;
+}
 
-        secondCard = this;
-        lockBoard = true; // Bloquear el tablero durante la verificación
+/* --- Tablero y Nuevos Tamaños de Grid --- */
+.game-board {
+    display: grid;
+    gap: 12px;
+    perspective: 1200px;
+    z-index: 10;
+    transition: all 0.5s ease;
+    /* CORRECCIÓN CLAVE: Asegura que el tablero ocupe el ancho disponible */
+    width: 100%; 
+}
 
-        checkForMatch();
-    }
+/* Tamaños de tablero mejorados */
+.grid-4x4 { grid-template-columns: repeat(4, 1fr); max-width: 500px; }
+.grid-5x4 { grid-template-columns: repeat(5, 1fr); max-width: 620px; }
+.grid-6x4 { grid-template-columns: repeat(6, 1fr); max-width: 740px; }
+.grid-6x5 { grid-template-columns: repeat(6, 1fr); max-width: 740px; }
 
-    // Verifica si las dos cartas volteadas coinciden
-    function checkForMatch() {
-        const isMatch = firstCard.dataset.name === secondCard.dataset.name;
-        isMatch ? disableCards() : unflipCards();
-    }
 
-    // Desactiva las cartas si coinciden
-    function disableCards() {
-        firstCard.removeEventListener('click', flipCard);
-        secondCard.removeEventListener('click', flipCard);
-        matchedPairs++;
-        resetBoard();
+.card-container {
+    background: rgba(255,255,255,0.1);
+    border-radius: 12px;
+    padding: 5px;
+    box-shadow: 0 4px 15px rgba(0,198,255,0.3);
+    backdrop-filter: blur(4px);
+    border: 1px solid rgba(255,255,255,0.2);
+}
 
-        if (matchedPairs === imageSources.length) {
-            endGame('win');
-        }
-    }
+/* --- Estilo de las Cartas --- */
+.card {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.6s;
+    cursor: pointer;
+}
+.card.flipped { transform: rotateY(180deg); }
 
-    // Voltea las cartas si no coinciden
-    function unflipCards() {
-        setTimeout(() => {
-            firstCard.classList.remove('flipped');
-            secondCard.classList.remove('flipped');
-            resetBoard();
-        }, 1200); // Pausa para que el jugador vea la segunda carta
-    }
-    
-    // Resetea las variables de las cartas seleccionadas
-    function resetBoard() {
-        [firstCard, secondCard] = [null, null];
-        lockBoard = false;
-    }
+.card-face {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden;
+    border-radius: 8px;
+    overflow: hidden;
+}
+.card-face img { width: 100%; height: 100%; object-fit: cover; }
+.card-face.card-front { transform: rotateY(180deg); }
 
-    // --- Temporizador y Fin del Juego ---
-    
-    function startTimer() {
-        timeLeft = totalTime;
-        timerElement.textContent = `Tiempo: ${timeLeft}`;
-        timerInterval = setInterval(() => {
-            timeLeft--;
-            timerElement.textContent = `Tiempo: ${timeLeft}`;
-            if (timeLeft <= 0) {
-                endGame('lose');
-            }
-        }, 1000);
-    }
+/* --- Modal Final --- */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.85);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    animation: fadeIn 0.5s ease;
+}
 
-    function endGame(result) {
-        clearInterval(timerInterval);
-        if (result === 'win') {
-            finalImage.src = 'img/ganaste1.gif';
-        } else {
-            finalImage.src = 'img/perdiste.gif';
-            gameBoard.style.pointerEvents = 'none'; // Desactivar clics en el tablero
-        }
-        setTimeout(() => {
-            modal.style.display = 'flex';
-        }, 500); // Pequeña espera antes de mostrar el modal
-    }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-    // --- Inicialización y Reinicio ---
+.modal-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+    text-align: center;
+}
 
-    function restartGame() {
-        modal.style.display = 'none';
-        gameBoard.style.pointerEvents = 'auto';
-        lockBoard = false;
-        matchedPairs = 0;
-        [firstCard, secondCard] = [null, null];
-        clearInterval(timerInterval);
-        
-        // Retraso para que el tablero se vacíe y se vuelva a llenar suavemente
-        setTimeout(() => {
-            createBoard();
-            startTimer();
-        }, 300);
-    }
-    
-    restartButton.addEventListener('click', restartGame);
+#modal-title {
+    font-size: 3rem;
+    color: #ffc107;
+    margin: 0;
+    text-shadow: 3px 3px 6px rgba(0,0,0,0.8);
+}
 
-    // Iniciar el juego por primera vez
-    createBoard();
-    startTimer();
-});
+#final-image {
+    max-width: 80vw;
+    max-height: 50vh;
+    border-radius: 15px;
+    border: 4px solid #ffc107;
+    background-color: #000;
+}
+
+#next-level-button, #restart-button {
+    font-family: 'Bangers', cursive;
+    font-size: 1.5rem;
+    padding: 10px 25px;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: transform 0.2s, background-color 0.2s;
+}
+
+#next-level-button { background-color: #4CAF50; color: white; }
+#restart-button { background-color: #ffc107; color: #a54a00; }
+#next-level-button:hover, #restart-button:hover { transform: scale(1.05); }
+
+/* --- Diseño Responsivo --- */
+@media (max-width: 780px) {
+    .grid-6x4, .grid-6x5 { max-width: 100%; }
+}
+@media (max-width: 640px) {
+    .grid-5x4 { max-width: 100%; }
+}
+@media (max-width: 600px) {
+    .start-title { font-size: 3rem; }
+    #start-game-button { font-size: 1.8rem; }
+    .stats-container { font-size: 1.5rem; }
+    .game-board { gap: 8px; }
+    .grid-4x4 { max-width: 100%; }
+}
