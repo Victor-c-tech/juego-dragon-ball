@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dragon Ball - Juego de Memoria</title>
+
+    <!-- Línea para el icono de navegación (favicon) -->
+    <link rel="icon" type="image/png" href="img/favicon.png">
+
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bangers&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <!-- Logo de Victor-Tech -->
+    <a href="https://victor-tech.com" target="_blank" class="logo-container">
+        <img src="img/logo-victor-tech.png" alt="Logo Victor-Tech">
+    </a>
+
+    <header class="game-header">
+        <h1>Dragon Ball </h1>
+        <div class="stats-container">
+            <div id="timer">Tiempo: 60</div>
+        </div>
+    </header>
+
+    <main class="game-board" id="game-board">
+        <!-- Las cartas se generarán aquí con JavaScript -->
+    </main>
+
+    <!-- Modal para mensaje final -->
+    <div id="final-modal" class="modal-overlay">
+        <div class="modal-content">
+            <img id="final-image" src="" alt="Resultado del juego">
+            <button id="restart-button">Jugar de Nuevo</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
